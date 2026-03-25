@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wandr — AI Travel Planner</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --sand: #f5f0e8;
+    --ink: #1a1612;
+    --terracotta: #c4622d;
+    --gold: #d4a843;
+    --sage: #6b8f71;
+    --cream: #faf7f2;
+    --muted: #8a7f74;
+    --card-bg: #ffffff;
+    --border: #e8e0d4;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--sand);
+    color: var(--ink);
+    min-height: 100vh;
+  }
+
+  header {
+    background: var(--ink);
+    padding: 18px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.6rem;
+    color: var(--gold);
+    letter-spacing: 2px;
+  }
+
+  .logo span { color: var(--terracotta); font-style: italic; }
+  .header-tagline { font-size: 0.75rem; color: var(--muted); letter-spacing: 3px; text-transform: uppercase; }
+
+  .hero {
+    background: var(--ink);
+    padding: 60px 40px 80px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -50%; right: -10%;
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(196,98,45,0.15) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .hero::after {
+    content: '';
+    position: absolute;
+    bottom: -30%; left: 20%;
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(212,168,67,0.1) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .hero-inner { max-width: 760px; margin: 0 auto; position: relative; z-index: 1; }
+  .hero-eyebrow { font-size: 0.7rem; letter-spacing: 4px; text-transform: uppercase; color: var(--terracotta); margin-bottom: 16px; }
+
+  .hero h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    color: var(--cream);
+    line-height: 1.2;
+    margin-bottom: 20px;
+  }
+
+  .hero h1 em { color: var(--gold); font-style: italic; }
+  .hero p { color: var(--muted); font-size: 1rem; line-height: 1.7; margin-bottom: 40px; max-width: 520px; }
+
+  .search-card { background: var(--cream); border-radius: 16px; padding: 32px; border: 1px solid rgba(255,255,255,0.1); }
+
+  .form-row { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 12px; align-items: end; }
+
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+
+  .form-group label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); font-weight: 500; }
+
+  .form-group input, .form-group select {
+    padding: 12px 16px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    background: white;
+    color: var(--ink);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .form-group input:focus, .form-group select:focus { border-color: var(--terracotta); }
+
+  .btn-plan {
+    padding: 13px 28px;
+    background: var(--terracotta);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+    letter-spacing: 0.5px;
+  }
+
+  .btn-plan:hover { background: #a8521f; transform: translateY(-1px); }
+  .btn-plan:disabled { background: var(--muted); cursor: not-allowed; transform: none; }
+
+  .main {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 50px 40px;
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 32px;
+    align-items: start;
+  }
+
+  .results-area { min-height: 300px; }
+
+  .empty-state { text-align: center; padding: 80px 40px; color: var(--muted); }
+  .empty-state .icon { font-size: 3rem; margin-bottom: 16px; }
+  .empty-state h3 { font-family: 'Playfair Display', serif; font-size: 1.3rem; color: var(--ink); margin-bottom: 8px; }
+
+  .loading { text-align: center; padding: 60px 40px; }
+  .loading-dots { display: flex; justify-content: center; gap: 8px; margin-bottom: 20px; }
+  .loading-dots span {
+    width: 10px; height: 10px;
+    background: var(--terracotta);
+    border-radius: 50%;
+    animation: bounce 1.2s infinite;
+  }
+  .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes bounce {
+    0%, 60%, 100% { transform: translateY(0); }
+    30% { transform: translateY(-12px); }
+  }
+
+  .loading p { color: var(--muted); font-size: 0.9rem; font-style: italic; }
+
+  .itinerary-header { margin-bottom: 28px; }
+  .itinerary-header h2 { font-family: 'Playfair Display', serif; font-size: 1.8rem; margin-bottom: 6px; }
+  .itinerary-header p { color: var(--muted); font-size: 0.9rem; }
+
+  .day-card {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    margin-bottom: 16px;
+    overflow: hidden;
+    animation: fadeUp 0.4s ease both;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .day-header { padding: 18px 24px; background: var(--ink); color: white; display: flex; align-items: center; gap: 14px; }
+  .day-number {
+    background: var(--terracotta);
+    color: white;
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 0.9rem; flex-shrink: 0;
+  }
+  .day-title { font-family: 'Playfair Display', serif; font-size: 1.05rem; }
+  .day-subtitle { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+  .day-body { padding: 20px 24px; white-space: pre-wrap; font-size: 0.88rem; line-height: 1.75; color: #3a3530; }
+
+  .sidebar { position: sticky; top: 90px; }
+  .sidebar-section { background: white; border-radius: 12px; border: 1px solid var(--border); padding: 20px; margin-bottom: 20px; }
+  .sidebar-title { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 3px; color: var(--muted); margin-bottom: 16px; font-weight: 500; }
+
+  .affiliate-card {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px; border: 1px solid var(--border);
+    border-radius: 8px; margin-bottom: 10px;
+    cursor: pointer; transition: all 0.15s;
+    text-decoration: none; color: inherit;
+  }
+  .affiliate-card:hover { border-color: var(--terracotta); background: #fff8f5; }
+
+  .affiliate-icon {
+    width: 38px; height: 38px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.2rem; flex-shrink: 0;
+  }
+  .affiliate-info h4 { font-size: 0.82rem; font-weight: 500; margin-bottom: 2px; }
+  .affiliate-info p { font-size: 0.72rem; color: var(--muted); }
+  .affiliate-badge {
+    margin-left: auto; font-size: 0.65rem;
+    background: #fff3cd; color: #856404;
+    padding: 2px 7px; border-radius: 20px;
+    font-weight: 500; flex-shrink: 0;
+  }
+
+  .promo-banner {
+    background: linear-gradient(135deg, var(--terracotta), #a8521f);
+    border-radius: 10px; padding: 18px;
+    color: white; text-align: center;
+  }
+  .promo-banner h4 { font-family: 'Playfair Display', serif; font-size: 1rem; margin-bottom: 6px; }
+  .promo-banner p { font-size: 0.78rem; opacity: 0.85; margin-bottom: 10px; }
+  .promo-btn {
+    display: inline-block; padding: 8px 20px;
+    background: white; color: var(--terracotta);
+    border-radius: 6px; font-size: 0.78rem;
+    font-weight: 500; text-decoration: none;
+    transition: transform 0.15s;
+  }
+  .promo-btn:hover { transform: scale(1.03); }
+
+  .ad-banner {
+    background: white; border: 1.5px dashed var(--border);
+    border-radius: 10px; padding: 20px;
+    text-align: center; color: var(--muted);
+  }
+  .ad-banner .ad-label { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px; display: block; }
+  .ad-banner .ad-placeholder { font-size: 0.8rem; line-height: 1.5; }
+  .ad-banner .ad-size { font-size: 0.7rem; color: #bbb; margin-top: 6px; }
+
+  footer { background: var(--ink); color: var(--muted); text-align: center; padding: 30px 40px; font-size: 0.78rem; margin-top: 60px; }
+  footer a { color: var(--gold); text-decoration: none; }
+
+  @media (max-width: 768px) {
+    .form-row { grid-template-columns: 1fr 1fr; }
+    .main { grid-template-columns: 1fr; padding: 30px 20px; }
+    .sidebar { position: static; }
+    header { padding: 14px 20px; }
+    .hero { padding: 40px 20px 60px; }
+    .search-card { padding: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Wand<span>r</span></div>
+  <div class="header-tagline">AI Travel Planner</div>
+</header>
+
+<section class="hero">
+  <div class="hero-inner">
+    <div class="hero-eyebrow">✦ Powered by AI</div>
+    <h1>Plan your dream trip<br><em>in seconds</em></h1>
+    <p>Tell us where you want to go — we'll handle the rest. Day-by-day itineraries, local recommendations, and insider tips, all free.</p>
+
+    <div class="search-card">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Destination</label>
+          <input type="text" id="destination" placeholder="e.g. Bali, Tokyo, Rome..." />
+        </div>
+        <div class="form-group">
+          <label>Duration</label>
+          <select id="days">
+            <option value="3">3 days</option>
+            <option value="5" selected>5 days</option>
+            <option value="7">7 days</option>
+            <option value="10">10 days</option>
+            <option value="14">14 days</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Travel Style</label>
+          <select id="style">
+            <option value="cultural and historical">Culture & History</option>
+            <option value="adventure and nature">Adventure & Nature</option>
+            <option value="luxury and relaxation">Luxury & Relax</option>
+            <option value="budget backpacker">Budget Friendly</option>
+            <option value="food and gastronomy">Food & Gastronomy</option>
+          </select>
+        </div>
+        <button class="btn-plan" id="planBtn" onclick="generatePlan()">Plan My Trip →</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="main">
+  <div class="results-area" id="results">
+    <div class="empty-state">
+      <div class="icon">🗺️</div>
+      <h3>Where to next?</h3>
+      <p>Enter your destination above and get a free AI-powered travel itinerary in seconds.</p>
+    </div>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-title">✈ Find Flights</div>
+      <a href="https://www.skyscanner.com" target="_blank" class="affiliate-card">
+        <div class="affiliate-icon" style="background:#00b4d8;color:white;">✈</div>
+        <div class="affiliate-info">
+          <h4>Skyscanner</h4>
+          <p>Compare cheapest flights</p>
+        </div>
+        <span class="affiliate-badge">Ad</span>
+      </a>
+      <a href="https://www.momondo.com" target="_blank" class="affiliate-card">
+        <div class="affiliate-icon" style="background:#ff6b35;color:white;">🔍</div>
+        <div class="affiliate-info">
+          <h4>Momondo</h4>
+          <p>Discover hidden fares</p>
+        </div>
+        <span class="affiliate-badge">Ad</span>
+      </a>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-title">🏨 Accommodation</div>
+      <a href="https://www.booking.com" target="_blank" class="affiliate-card">
+        <div class="affiliate-icon" style="background:#003580;color:white;">B</div>
+        <div class="affiliate-info">
+          <h4>Booking.com</h4>
+          <p>Free cancellation options</p>
+        </div>
+        <span class="affiliate-badge">4% comm.</span>
+      </a>
+      <a href="https://www.airbnb.com" target="_blank" class="affiliate-card">
+        <div class="affiliate-icon" style="background:#ff385c;color:white;">♠</div>
+        <div class="affiliate-info">
+          <h4>Airbnb</h4>
+          <p>Live like a local</p>
+        </div>
+        <span class="affiliate-badge">3% comm.</span>
+      </a>
+    </div>
+
+    <div class="promo-banner">
+      <h4>Travel Insurance</h4>
+      <p>Travel with peace of mind. Get 15% off your first policy!</p>
+      <a href="https://www.worldnomads.com" target="_blank" class="promo-btn">Get a Quote →</a>
+    </div>
+
+    <div class="ad-banner" style="margin-top:20px;">
+      <span class="ad-label">Advertisement</span>
+      <div class="ad-placeholder">Google AdSense or<br>direct ad placement</div>
+      <div class="ad-size">300×250 — Medium Rectangle</div>
+    </div>
+  </aside>
+</div>
+
+<footer>
+  <p>© 2025 Wandr · <a href="#">Privacy</a> · <a href="#">Terms</a> · Some links on this site may be affiliate links.</p>
+</footer>
+
+<script>
+async function generatePlan() {
+  const destination = document.getElementById('destination').value.trim();
+  if (!destination) {
+    document.getElementById('destination').focus();
+    return;
+  }
+
+  const days = document.getElementById('days').value;
+  const style = document.getElementById('style').value;
+  const btn = document.getElementById('planBtn');
+  const results = document.getElementById('results');
+
+  btn.disabled = true;
+  btn.textContent = 'Planning...';
+
+  results.innerHTML = `
+    <div class="loading">
+      <div class="loading-dots"><span></span><span></span><span></span></div>
+      <p>Building your ${days}-day ${destination} itinerary...</p>
+    </div>`;
+
+  try {
+    const response = await fetch("/api/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ destination, days, style })
+    });
+
+    let data;
+    const contentType = response.headers.get("content-type") || "";
+    if (contentType.includes("application/json")) {
+      data = await response.json();
+    } else {
+      const raw = await response.text();
+      throw new Error("Server returned unexpected response (Status " + response.status + "). Check Vercel deployment logs.");
+    }
+
+    if (!response.ok) {
+      throw new Error(data.error || "API error (Status " + response.status + ")");
+    }
+
+    if (!data.text) {
+      throw new Error("Empty response from AI. Try again.");
+    }
+
+    renderItinerary(destination, days, style, data.text);
+  } catch (e) {
+    results.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><h3>Something went wrong</h3><p>${e.message || 'Please try again.'}</p></div>`;
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Plan My Trip →';
+}
+
+function renderItinerary(destination, days, style, text) {
+  const lines = text.split('\n');
+  const dayBlocks = [];
+  let current = null;
+
+  for (const line of lines) {
+    const match = line.match(/^DAY\s*(\d+)\s*[:\-–]\s*(.+)/i);
+    if (match) {
+      if (current) dayBlocks.push(current);
+      current = { num: match[1], title: match[2], body: '' };
+    } else if (current) {
+      current.body += line + '\n';
+    }
+  }
+  if (current) dayBlocks.push(current);
+
+  if (dayBlocks.length === 0) {
+    dayBlocks.push({ num: '1', title: 'Your Itinerary', body: text });
+  }
+
+  results.innerHTML = `
+    <div class="itinerary-header">
+      <h2>📍 ${destination}</h2>
+      <p>${days} days · ${style} · Generated by AI</p>
+    </div>
+    ${dayBlocks.map((d, i) => `
+      <div class="day-card" style="animation-delay:${i * 0.08}s">
+        <div class="day-header">
+          <div class="day-number">${d.num}</div>
+          <div>
+            <div class="day-title">${d.title}</div>
+            <div class="day-subtitle">Day ${d.num}</div>
+          </div>
+        </div>
+        <div class="day-body">${d.body.trim()}</div>
+      </div>
+    `).join('')}
+  `;
+}
+
+document.getElementById('destination').addEventListener('keydown', e => {
+  if (e.key === 'Enter') generatePlan();
+});
+</script>
+</body>
+</html>
